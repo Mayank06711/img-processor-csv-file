@@ -24,10 +24,11 @@ app.use(express.urlencoded({extended: true, limit:"20kb"}))
 
 
 // import routes and middlewares
-import errorHandler from './utils/error.js';
+import Middlewares from './middleware/middleware.js';
 import csvRoute from "./routes/csv.routes.js"
-app.use(errorHandler)
+
 
 app.use("/api/v1/csv", csvRoute)
 
+app.use(Middlewares.errorHandler)
 export { app }

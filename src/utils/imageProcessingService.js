@@ -18,7 +18,6 @@ const s3Client = new S3Client({
 class imageProcessor {
   static async downloadImage(url) {
     try {
-
       const response = await axios.get(url, { responseType: "arraybuffer" });
       return Buffer.from(response.data, "binary");
     } catch (error) {
@@ -37,7 +36,6 @@ class imageProcessor {
     try {
       const multipartUpload = await s3Client.send(createMultipartUpload);
       const uploadId = multipartUpload.UploadId;
-
       const chunkSize = 5 * 1024 * 1024; // 5 MB
       const numChunks = Math.ceil(file.size / chunkSize);
       const uploadParts  = [];
@@ -79,7 +77,7 @@ class imageProcessor {
         Key: key,
       })
       const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60*60*5 }); // Generate a signed URL  for
-      //return `https://${bucket}.s3.amazonaws.com/${key}`;
+      //return `https://${bucket}.s3.amazonaws.com/${key}`;   // this will lead to invalid access 
       return signedUrl;
     } catch (error) {
       console.error(error);
@@ -89,6 +87,7 @@ class imageProcessor {
 
   static async processImg(prodIds, reqId) {
     // Update the status to 'in-progress'
+    console.log(prodIds)
     await Status.updateOne({ requestId: reqId }, { status: "in-progress" });
 
     for (const productId of prodIds) {
