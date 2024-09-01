@@ -4,6 +4,7 @@ import Utility from "../utils/imageProcessingService.js";
 import Product from "../model/productModel.js";
 import sharp from "sharp";
 import Status from "../model/statusModel.js";
+import Webhook from "./webhookHandler.js";
 
 class Processor {
   static async processImage(prodId, reqId, filePath, colName) {
@@ -48,7 +49,9 @@ class Processor {
             .jpeg({ quality: 50 })
             .toBuffer();
 
-          const key = `processed-images/${"reqId" + reqId}/${Date.now()}-${prodId}-${i}.jpeg`;
+          const key = `processed-images/${
+            "reqId" + reqId
+          }/${Date.now()}-${prodId}-${i}.jpeg`;
 
           const outputUrl = await Utility.multipartUploadToS3(
             process.env.AWS_BUCKET_NAME,
@@ -91,13 +94,15 @@ class Processor {
 
         // Write each row, ensuring correct data is placed in each column
         for (let [serialNumber, row] of rowsMap) {
-          const rowData = headers.map((header) => {
-            if (header === colName) {
-              return row[header]; // Only write the updated output image URLs to the colName column
-            } else {
-              return row[header] || ""; // Write existing data for all other columns
-            }
-          }).join(",");
+          const rowData = headers
+            .map((header) => {
+              if (header === colName) {
+                return row[header]; // Only write the updated output image URLs to the colName column
+              } else {
+                return row[header] || ""; // Write existing data for all other columns
+              }
+            })
+            .join(",");
           writeStream.write(rowData + "\n");
         }
 
@@ -106,7 +111,7 @@ class Processor {
         writeStream.on("finish", async () => {
           console.log("Finished writing to temp file.");
           try {
-            await fs.promises.rename(tempFilePath, filePath); 
+            await fs.promises.rename(tempFilePath, filePath);
             console.log("Temp file renamed to original file.");
             resolve();
           } catch (err) {
@@ -125,12 +130,20 @@ class Processor {
       product.outputImages = outputImages;
       await product.save();
 
-      // Update the status to 'completed'
-      await Status.updateOne({ requestId: reqId }, { status: "completed" });
-
-      console.log("CSV file updated successfully with output URLs.");
+      Webhook.triggerWebhook(
+        "http://localhost:8003/api/v1/csv/webhook/handle",
+        `${reqId}`,
+        `${prodId}`,
+        "completed"
+      );
     } catch (error) {
       console.error("Error in processImage:", error);
+     Webhook.triggerWebhook(
+        "http://localhost:8003/api/v1/csv/webhook/handle",
+        `${reqId}`,
+        `${prodId}`,
+        "failed"
+      );
     }
   }
 }

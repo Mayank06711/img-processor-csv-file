@@ -1,11 +1,10 @@
-import Status from "../model/statusModel";
-
+import Status from "../model/statusModel.js";
+import axios from "axios";
 class Webhook {
-  static async triggerWebhook(reqId, productId) {
-    const webhookUrl = "https://your-webhook-url.com/webhook"; // Replace with your actual webhook URL
+  static async triggerWebhook(webhookUrl, reqId, productId, status) {
+ // Replace with your actual webhook URL
     const maxRetries = 5; // Maximum number of retry attempts
     const retryDelay = 2000; // Initial delay between retries (in milliseconds)
-
     let attempt = 0;
     let success = false;
 
@@ -13,9 +12,14 @@ class Webhook {
       try {
         attempt++;
         await axios.post(webhookUrl, {
-          requestId: reqId,
-          status: "completed",
-          productId: productId,
+          reqId: reqId,
+          status: status,
+          prodId: productId,
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+            // any other required headers here
+          }
         });
         console.log("Webhook triggered successfully on attempt", attempt);
         success = true; // Mark success if the request is successful
@@ -38,15 +42,24 @@ class Webhook {
 
   static async handleWebhook(req, res) {
     const { reqId, status, prodId } = req.body;
+    console.log(reqId, status, prodId);
+    if(!reqId){
+      return res.status(400).json({ message: "Request ID is required." });
+    }
+    if(!status){
+      return res.status(400).json({ message: "Status of image processing is required is required." });
+    }
 
     try {
+      if(status === "failed"){
+        res.status(500).json({ message: "Image processing failed." });
+      }
       // Update the request status in the database
       await Status.updateOne({ requestId: reqId }, { status });
-
       res
         .status(200)
         .json({
-          productId: prodId,
+          productId: prodId || "",
           message: `Webhook received and processed successfully for requstId: ${reqId}`,
         });
     } catch (error) {
