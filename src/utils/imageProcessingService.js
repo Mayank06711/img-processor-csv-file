@@ -15,7 +15,7 @@ const s3Client = new S3Client({
 })
 
 
-class imageProcessor {
+class Utility {
   static async downloadImage(url) {
     try {
       const response = await axios.get(url, { responseType: "arraybuffer" });
@@ -85,76 +85,8 @@ class imageProcessor {
     }
   }
 
-  static async processImg(prodIds, reqId) {
-    // Update the status to 'in-progress'
-    console.log(prodIds)
-    await Status.updateOne({ requestId: reqId }, { status: "in-progress" });
-
-    for (const productId of prodIds) {
-      const product = await Product.findById(productId);
-      const outputImages = [];
-
-      for (const imageUrl of product.inputImages) {
-        const imageBuffer = await this.downloadImage(imageUrl);
-        const outputBuffer = await sharp(imageBuffer)
-          .jpeg({ quality: 50 }) // Reduce JPEG quality to 50%
-          .toBuffer();
-
-        // Generate a unique key for the S3 object
-        const key = `processed-images/${Date.now().toLocaleString()}-${productId}.jpeg`;
-
-
-        const outputUrl = await this.multipartUploadToS3(process.env.AWS_BUCKET_NAME, key,{
-            buffer: outputBuffer,
-            mimetype: 'image/jpeg',
-            size: outputBuffer.length,
-        }); 
-        console.log("Image processed and uploaded to S3:", outputUrl);
-        outputImages.push(outputUrl);
-      }
-
-      product.outputImages = outputImages;
-      await product.save();
-    }
-
-    await Status.updateOne({ requestId: reqId }, { status: "completed" });
-   
-
-
-    // Trigger the webhook
-    // try {
-    //   await axios.post("https://your-webhook-url.com/webhook", {
-    //     reqId,
-    //     status: "completed",
-    //     productId: prodIds, // Assuming one product per request
-    //   });
-    // } catch (error) {
-    //   console.error("Failed to trigger webhook:", error);
-    //   // Implement retry logic or error handling here
-    // }
-  }
 
 }
 
-export default imageProcessor;
+export default Utility;
 
-
-//   static async triggerWebhook(url, payload, retries = 3) {
-//     for (let attempt = 1; attempt <= retries; attempt++) {
-//       try {
-//         await axios.post(url, payload);
-//         console.log("Webhook triggered successfully");
-//         break; // Exit loop on success
-//       } catch (error) {
-//         if (attempt === retries) {
-//           console.error(
-//             "Failed to trigger webhook after multiple attempts:",
-//             error
-//           );
-//           // Log or handle the failure
-//         } else {
-//           console.log(`Retrying webhook (${attempt}/${retries})...`);
-//         }
-//       }
-//     }
-//   }
