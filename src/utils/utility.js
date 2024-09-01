@@ -1,9 +1,6 @@
 import axios from "axios";
 import  {  S3Client, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, GetObjectCommand} from "@aws-sdk/client-s3"  
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
-import sharp from "sharp";
-import Product from "../model/productModel.js";
-import Status from "../model/statusModel.js";
 
 // Create a new S3 client using the provided AWS credentials and region
 const s3Client = new S3Client({

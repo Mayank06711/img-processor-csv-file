@@ -1,6 +1,6 @@
 import fs from "fs";
 import csvParser from "csv-parser";
-import Utility from "../utils/imageProcessingService.js";
+import Utility from "../utils/utility.js";
 import Product from "../model/productModel.js";
 import sharp from "sharp";
 import Status from "../model/statusModel.js";
